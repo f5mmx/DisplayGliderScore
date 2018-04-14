@@ -1,6 +1,6 @@
 /*
-* Gestion BIG afficheur Glider Score - Emmission
-*       version 1.2 janvier 2018
+* Gestion Afficheur Glider Score - Emmission
+*       version 1.3 janvier 2018
 * rajout d'un OLED pour visu en local               
 * 
 * Olivier Segouin - Arduino 1.6.12
@@ -9,8 +9,29 @@
 * 
 * Verion 1.3 Rajout d'envoi une trame toutes les 250Ms
 * 
-* Programme emmission, connection en USB sur le PC eception et gestion afficheur avec GliderScore DigitalTime
+* Etude des frequences Radio 2.4Ghz
+* The range is 2.400 to 2.525 Ghz which is 2400 to 2525 MHz (MegaHz). 
+* The nRF24L01 channel spacing is 1 Mhz which gives 125 possible channels numbered 0 .. 124. 
+* WiFi uses most of the lower channels and we suggest using the highest 25 channels for nRF24L01 projects. 
+* On utilisera le Canal 1 - donc 2400+1 le Canal 1 a donc son centre de frequence a 2401MHz
+* Le Canal 1 en Wifi est centre sur 2412M€z avec une bande de +-11Mhz, donc descend jusqu'a 2401 
+* Qu'en est il en 2.4GHz RC ? 
+* SPECTRUM.........2.400 to 2.425 - 80 unique Channels
+* FUTABA...........2.426 TO 2.450 - 26..27 unique Channels
+* XPS..............2.451 TO 2.475 - 12 unique channels 
+* ASSAN............2.476 TO 2.499 
+* JETI.............
+* GRAUPNER.........
+* Afin de garder la compatibilité de tous les afficheurs réalisés, GARDONS le Canal 1 
+* 
+* Programme emmission connection en USB sur le PC eception et gestion afficheur avec GliderScore DigitalTime
 */
+
+
+
+
+
+
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
@@ -38,6 +59,7 @@ RF24 radio(7, 8); // CE, CSN
 const byte address[6] = "00001";
 int compt = 0;
 String chainerecu = "";
+String chainecourante ="";
 char chaineradio[]="A1234";
 String caractererecu = "";
 int octetreception = 0;
@@ -45,7 +67,7 @@ int testint = 1234;
 String manche ="0";
 String groupe ="0"; 
 String chrono ="0";
-int temps_ancien;
+int temps_ancien = 0;
 
 void initaff() {
       display.clearDisplay();
@@ -57,16 +79,14 @@ void initaff() {
       display.setTextSize(5);
       display.setTextColor(WHITE);
       display.print("WAIT");  
-      display.display();
-         
+      display.display();      
 }
-
 
 
 void setup() {
   radio.begin();
   radio.openWritingPipe(address);
-  radio.setChannel(1);// 108 2.508 Ghz
+  radio.setChannel(1);// 1 2.401 Ghz
   radio.setPALevel(RF24_PA_MAX);
   radio.setDataRate(RF24_1MBPS);
   //radio.setDataRate(RF24_250KBPS);
@@ -90,6 +110,13 @@ void setup() {
 }
 
 void loop() {
+ 
+ if (millis() - temps_ancien >= 250)
+ {
+      radio.write(&chainecourante,sizeof(chainecourante));  //on boucle sur transmission 4 fois par secondes 
+      temps_ancien =millis();
+ }
+  
  portOne.listen();
  while (portOne.available() > 0) 
  {
@@ -106,8 +133,9 @@ void loop() {
         manche = chainerecu[2];
         groupe = chainerecu[4];
         Serial.println ("Manche "+manche+ "Groupe "+groupe);
-        //chainerecu = "A"+chainerecu; // on ruse car apres on va l'enlever
       }
+
+      chainecourante = chainerecu ;
     
       display.clearDisplay();
       display.setTextSize(1);
@@ -138,11 +166,7 @@ void loop() {
 
  }
 }
-// if (millis() - temps_ancien >= 600)
-//    {
-//       radio.write(&chaineradio,sizeof(chaineradio));  //on boucle sur transmission 3 fois par secondes 
-//       temps_ancien =millis();
-//    }
+
  
 
 
