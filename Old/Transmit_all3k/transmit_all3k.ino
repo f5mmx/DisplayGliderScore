@@ -1,6 +1,10 @@
 /*
 * Gestion Afficheur Glider Score - Emmission
-*       version 1.4 juillet 2018
+*       version 1.5 juillet 2018
+*       Adaptation au programme f3K et glider score avec protocole etendue
+*       G01R01T0230WT .....
+*       version 1.6 septembre 2018
+*       Adaptation au programme enhanced protocol de GliderScoer
 * rajout d'un OLED pour visu en local               
 * 
 * Olivier Segouin - Arduino 1.6.12
@@ -9,6 +13,7 @@
 * 
 * Version 1.3 Rajout d'envoi une trame toutes les 250Ms
 * Version 1.4 debug de la transmission cyclique envoi toutes les 250mS de la trame radio
+* Version 1.5 adaptation protocol etendue
 * 
 * Etude des frequences Radio 2.4Ghz
 * The range is 2.400 to 2.525 Ghz which is 2400 to 2525 MHz (MegaHz). 
@@ -40,10 +45,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#include <SoftwareSerial.h>
-// software serial #1: RX = digital pin 0, TX = digital pin 1
-SoftwareSerial portOne(0, 1);
-
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
 
@@ -61,13 +62,17 @@ const byte address[6] = "00001";
 int compt = 0;
 String chainerecu = "";
 String chainecourante ="";
-char chaineradio[]="A1234";
+char chaineradio[]="G01R01T0230WT";
+
 String caractererecu = "";
 int octetreception = 0;
-int testint = 1234;
+
+char charreception;
 String manche ="0";
 String groupe ="0"; 
 String chrono ="0";
+String statut ="NO";
+
 unsigned long temps_ancien = 0;
 unsigned long tempcyc = 250L; 
 
@@ -76,12 +81,35 @@ void initaff() {
       display.setTextSize(1);
       display.setTextColor(WHITE);
       display.setCursor(0,0);
-      display.println("   Version : 1.4");
+      display.println("  Version : 1.6 EP");
       display.setCursor(5,30);
       display.setTextSize(5);
       display.setTextColor(WHITE);
       display.print("WAIT");  
       display.display();      
+}
+
+
+void affdisplay() {
+//  if (chainecourante != "") {
+      manche = chainecourante.substring(2,3);
+      groupe = chainecourante.substring(5,6);
+      chrono = chainecourante.substring(7,11);
+      statut = chainecourante.substring(11,13);
+      Serial.println ("Manche "+manche+ "Groupe "+groupe="Chrono "+chrono);
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setCursor(0,0);
+      display.println("Manche:"+manche+" Groupe:"+groupe+"  "+statut);    
+      display.setCursor(5,30);
+      display.setTextSize(5);
+      display.setTextColor(WHITE);
+      display.print(chrono);  
+      display.display(); 
+      delay(2);
+//  }
+      
 }
 
 
@@ -106,72 +134,47 @@ void setup() {
   {
     ; // wait fo r serial port to connect. Needed for native USB port only
   }
-  // Start each software serial port
-  portOne.begin(9600);
   temps_ancien = millis();
 }
 
 void loop() {
 
- if (millis() - temps_ancien >= tempcyc)
+if (millis() - temps_ancien >= tempcyc)
  {
       temps_ancien =millis();
       chainecourante.toCharArray(chaineradio,chainecourante.length()+1); // récupère la chaine courante dans le tableau de char de chaine radio 
       radio.write(&chaineradio,sizeof(chaineradio)); // envoi de la chaine recu RS en radio
       //Serial.println ("EnvoiradioCyc:"+chainecourante); 
  }
-  
- portOne.listen();
- while (portOne.available() > 0) 
+
+ 
+ while (Serial.available() > 0) 
  {
-    octetreception = portOne.read();
-    compt = compt+1;
-    //Serial.println("Ascii Caractere "+ String(compt) +" = "+ String(octetreception)); 
-    if (octetreception==13) // fin de la trame de gliderscore
-    {
-      chainerecu.toCharArray(chaineradio,chainerecu.length()+1); // récupère la cahine recu dans le tableau de char de chaine radio 
+    charreception = Serial.read();
+    if ((charreception==13) or (charreception==10)) // fin de la trame de gliderscore 
+   {
+      chainerecu = chainerecu.substring(0,13);  //(0,14) f3K programme demander d'enlever le LF et de ne garder que le CR 
+      //Serial.println("On a une trame complete"+ chainerecu);
+      chainerecu.toCharArray(chaineradio,chainerecu.length()+1); // récupère la chaine recu dans le tableau de char de chaine radio 
       radio.write(&chaineradio,sizeof(chaineradio)); // envoi de la chaine recu RS en radio
-      //Serial.println ("Envoiradio:"+chainerecu);
+      Serial.println ("Envoiradio:"+chainerecu);
       chainecourante = chainerecu ;
-      if (chainerecu[1]=='F') 
-      {
-        manche = chainerecu[2];
-        groupe = chainerecu[4];
-        //Serial.println ("Manche "+manche+ "Groupe "+groupe);
-      }
-
-        
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setTextColor(WHITE);
-      display.setCursor(0,0);
-      display.println("Manche :"+manche+"   Groupe :"+groupe);
-    
-      display.setCursor(5,30);
-      display.setTextSize(5);
-      display.setTextColor(WHITE);
-
-      chrono=chainerecu.substring(1); // on enleve le A en rang 0  
-      display.print(chrono);  
-      display.display();
-         
-      delay(5);
-      chainerecu = "";
-      caractererecu ="";
-      compt=0;
-      break;
-    }
-    else
-    {
-     caractererecu = char (octetreception);
-     chainerecu = chainerecu + caractererecu;
-    }
+      affdisplay();
+      // Reset string et on sort de la boucle
+      chainerecu=""; //RAZ le String de réception
+      delay(10); // pause
+      break; // sort de la boucle while
+   }
+   else
+   {
+      chainerecu = chainerecu + charreception;
+   }
 
 
  }
 }
 
- 
+
 
 
 

@@ -1,7 +1,7 @@
 /*
 * Gestion Small afficheur Glider Score - Reception
 *    Panneau de Led en ruban type WS2812 rgb 
-*       version 1.2 avril 2018
+*       version 1.21 mai 2018
 *                
 * Olivier Segouin - Arduino 1.6.12
 * 
@@ -9,7 +9,9 @@
 * 
 * Programme reception et gestion afficheur
 * Gestion de m'affichage en led WS2812 ruban
-* non aafiche du 0 des dizaines de minutes
+* 1.2 non affichage du 0 des dizaines de minutes
+* 1.21 modification du chiffre 9, rajout de la barre du bas
+* 1.21 modification de l'init avec affichage de tous les segments sur 8 pour verification
 */
 #include <SPI.h>
 #include <nRF24L01.h>
@@ -29,8 +31,7 @@ String manche = "0";
 String groupe = "0"; 
 String chronoS = "0000";
 char chrono[32]="";
-uint16_t x, y;
-boolean flag = false;
+
 
 CRGB leds[NUM_LEDS]; // Define LEDs strip
 // 10 digit :0...10, each digit is composed of 7 segments of 4 leds - Gestion digit 11 pour effacement du 0 
@@ -80,7 +81,7 @@ byte digits[11][28] = {
   , // Digit 8
 
   {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1
   }
   , // Digit 9 
    {
@@ -89,7 +90,6 @@ byte digits[11][28] = {
 }; // Digit 10 special non affichage 0  | 2D Array for numbers on 7 segment
 
 bool Dot = true; //Dot state
-int last_digit = 0;
 long ledColor = CRGB::Red;
 long ledColorR = CRGB::DarkRed;
 long ledColorW = CRGB::GhostWhite;
@@ -126,6 +126,14 @@ void setup() {
   radio.startListening();
   // Init Afficheur afin de verifier son fonctionnement au demarrage
   showProgramShiftSinglePixel(CRGB::Maroon, 5); // show "shift single pixel program" with maroon pixel
+  delay(100); 
+  // init avec allumage des segments en Full 8
+  manche = "1";
+  groupe = "2";
+  chronoS = "3456";
+  TimeToArray(); // Get leds array with required configuration
+  FastLED.show(); // Display leds array
+
 }
 
 
@@ -141,8 +149,8 @@ void TimeToArray() {
   long Now =  (manchel * 100000 + groupel * 10000 + chronol) ;
   
   int cursor = 86; 
-  Serial.print("Valeur est: ");
-  Serial.println(chronoS+" : " + Now);
+  //Serial.print("Valeur est: ");
+  //Serial.println(chronoS+" : " + Now);
   if (Dot) {
     leds[168] = ledColor;
     leds[169] = ledColor;
@@ -211,7 +219,7 @@ void TimeToArray() {
       cursor = 28;
       for (int k = 0; k <= 27; k++) {
         if (digits[digit][k] == 1) {
-          leds[cursor] = ledColorL;
+          leds[cursor] = ledColorL;  // LedColorL
         }
         else if (digits[digit][k] == 0) {
           leds[cursor] = 0x000000;
@@ -223,7 +231,7 @@ void TimeToArray() {
       cursor = 0;
      for (int k = 0; k <= 27; k++) {
         if (digits[digit][k] == 1) {
-          leds[cursor] = ledColorW;
+          leds[cursor] = ledColorW ;   //LedColorW
         }
         else if (digits[digit][k] == 0) {
           leds[cursor] = 0x000000;
