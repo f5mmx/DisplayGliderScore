@@ -30,13 +30,20 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define OLED_RESET 4
+Adafruit_SSD1306 display(OLED_RESET);
+
+#if (SSD1306_LCDHEIGHT != 64)
+#error("Height incorrect, please fix Adafruit_SSD1306.h!");
+#endif
 
 
 // Variables and constants
 RF24 radio(7, 8); // CE, CSN
 const byte address[6] = "00001";
-String manche = "1";
-String groupe = "1"; 
 String chronoS = "0000";
 String chronoS1 = "1";
 String chronoS2 = "2";
@@ -46,8 +53,14 @@ String statutS ="NO";
 bool CliGroupRound;
 bool CliChrono;
 
-char chrono[32]="";
-char statut[32]="";
+String chainerecu = "";
+String chainecourante ="";
+
+char charreception;
+String manche ="0";
+String groupe ="0"; 
+String chrono ="0";
+String statut ="NO";
 
 //GPIO declarations
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -58,6 +71,42 @@ byte segmentData = 6;
 bool Dot = true; //Dot state
 unsigned long tempo=0;
 boolean flip_flop=false;
+
+void initaff() {
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setCursor(0,0);
+      display.println("  Version : Test");
+      display.setCursor(5,30);
+      display.setTextSize(5);
+      display.setTextColor(WHITE);
+      display.print("WAIT");  
+      display.display();      
+}
+
+
+void affdisplay() {
+//  if (chainecourante != "") {
+      manche = chainecourante.substring(2,3);
+      groupe = chainecourante.substring(5,6);
+      chrono = chainecourante.substring(7,11);
+      statut = chainecourante.substring(11,13);
+      Serial.println ("Manche "+manche+ "Groupe "+groupe="Chrono "+chrono);
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setCursor(0,0);
+      display.println("Manche:"+manche+" Groupe:"+groupe+"  "+statut);    
+      display.setCursor(5,30);
+      display.setTextSize(5);
+      display.setTextColor(WHITE);
+      display.print(chrono);  
+      display.display(); 
+      delay(2);
+//  }
+      
+}
 
 void setup() {
   Serial.begin(9600);
@@ -80,9 +129,9 @@ void setup() {
   radio.openReadingPipe(0, address);
   radio.startListening();
    // Init Afficheur afin de verifier son fonctionnement au demarrage
-  showNumber(888888);   
-  delay (3000);
-  showNumber (123456);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3D (for the 128x64)
+  display.clearDisplay();
+  initaff();
   tempo=millis(); 
 }
 
@@ -110,7 +159,7 @@ void TimeToArray() {
   long groupel = groupe.toInt(); // convertion chaine en long pour affichage
   long chronol = chronoS.toInt(); // convertion chaine en long pour affichage
   long Now =  ((manchel %10) * 100000 + (groupel %10) * 10000 + chronol) ;
-  showNumber(Now);
+  affdisplay();
 };
 
 
