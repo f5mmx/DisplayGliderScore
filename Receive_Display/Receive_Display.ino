@@ -7,6 +7,9 @@
 * Version 1.3 Juin 2018
 * Version 1.4 Juillet 2018
 * Version 1.5 Aout 2018
+* Version 1.6 fevrier 2019
+* Version 1.7 fevrier 2019
+* 
 * 
 *  - Gestion des rounds et manches >9          
 *  - Masque des dizaines de minutes si valeur =0
@@ -19,6 +22,8 @@
 *   ST - Sleep Time - Temps attente - Clignotement manche et groupe et chrono
 * 
 *   V1.5 gestion clignotement toute les 500ms
+*   V1.6 on sort de n'affiche rien si la trame est conrompu et ne termine pas par le statut WT, PT ou WL
+*   V1.7 implemantation d'un Checksum 8 bits simple 
 *   
 * Olivier Segouin - Arduino 1.6.12
 * 
@@ -43,11 +48,14 @@ String chronoS2 = "2";
 String chronoS3 = "3";
 String chronoS4 = "4";
 String statutS ="NO";
+String statut1 ="W";
+String statut2 ="T";
 bool CliGroupRound;
 bool CliChrono;
 
 char chrono[32]="";
 char statut[32]="";
+char sum;
 
 //GPIO declarations
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -101,7 +109,13 @@ void TimeToArray() {
            {
            CliGroupRound = 0 ; CliChrono=1;
            }else{
-           CliGroupRound = 0 ; CliChrono=0;
+              if (statutS == "WT")
+              {
+                CliGroupRound = 0 ; CliChrono=0;
+              }else {
+                // Pas normal, donc on sort,
+               return;
+              }
            }
            }
        }
@@ -116,24 +130,26 @@ void TimeToArray() {
 
 
 void loop() {
-  if ((millis()-tempo)>=500){flip_flop=!flip_flop;tempo=millis();}
+if ((millis()-tempo)>=500){flip_flop=!flip_flop;tempo=millis();}
   if (radio.available()) {
     char text[32] = "";
     radio.read(&text, sizeof(text));
-    if (text[0]=='R')  // c'est bien une trame de gliderscore R01G1 ...trame commence par R
-    {
-      manche = text[2];
-      groupe = text[5];
-      chronoS1 = text[7];chronoS2 = text[8];chronoS3 = text[9];chronoS4 = text[10];
-      chronoS = chronoS1+chronoS2+chronoS3+chronoS4;
-      statutS = &text[11];
-      Serial.println ("Manche "+manche+ " Groupe " + groupe+" Chrono "+chronoS+" Status "+statutS);
-    }
-
-      TimeToArray(); // Get leds array with required configuration
-      delay(100);
-      Dot = not Dot ; // Clignotement des 2 points
-      //Serial.println(text);
+    if (text[0]=='R'){  // c'est bien une trame de gliderscore R01G1 ...trame commence par R
+    // la trame est elle valide avec son checksum ? 
+        if (strcmp(text,checksum(text)==0)){
+           manche = text[2];
+           groupe = text[5];
+           chronoS1 = text[7];chronoS2 = text[8];chronoS3 = text[9];chronoS4 = text[10];
+           chronoS = chronoS1+chronoS2+chronoS3+chronoS4;
+           statut1 = text[11],statut2=text[12];statutS=statut1+statut2;
+           //statutS = &text[11]
+           TimeToArray(); // Get leds array with required configuration
+        } // fin de if verif checksum
+    } // fin de if trame debute par R 
+    Serial.println ("Manche "+manche+ " Groupe " + groupe+" Chrono "+chronoS+" Status "+statutS+": CHKsum :"+sum);
+    delay(100);
+    Dot = not Dot ; // Clignotement des 2 points
+    //Serial.println(text);
   }
 }
 
@@ -226,3 +242,20 @@ void postNumber(byte number, boolean decimal)
     digitalWrite(segmentClock, HIGH); //Data transfers to the register on the rising edge of SRCK
   }
 }
+
+
+
+
+
+String checksum(String chaine)
+{
+      sum=0;
+      for (byte i=0;i<(chaine.length()-3);i++)
+      {
+          sum = chaine[i] +sum;
+      }  
+      sum = (sum & 0x3F) + 0x20;
+      return (chaine.substring(0,chaine.length()-1)+sum);
+}
+
+

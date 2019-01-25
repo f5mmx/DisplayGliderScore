@@ -848,10 +848,8 @@ wire to board 2.54 mm (.1 inch) pitch header</description>
 </segment>
 <segment>
 <pinref part="NRF24" gate="1" pin="5"/>
+<wire x1="-20.32" y1="73.66" x2="-15.24" y2="73.66" width="0.1524" layer="91"/>
 <label x="-15.24" y="73.66" size="1.778" layer="95" xref="yes"/>
-<wire x1="-20.32" y1="73.66" x2="-10.16" y2="73.66" width="0.1524" layer="91"/>
-<wire x1="-10.16" y1="73.66" x2="-10.16" y2="86.36" width="0.1524" layer="91"/>
-<wire x1="-10.16" y1="86.36" x2="50.8" y2="86.36" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="D13" class="0">
@@ -911,7 +909,7 @@ wire to board 2.54 mm (.1 inch) pitch header</description>
 <segment>
 <pinref part="NRF24" gate="1" pin="1"/>
 <wire x1="-20.32" y1="63.5" x2="-15.24" y2="63.5" width="0.1524" layer="91"/>
-<label x="-15.24" y="63.5" size="1.778" layer="91" xref="yes"/>
+<label x="-15.24" y="63.5" size="1.778" layer="95" xref="yes"/>
 </segment>
 </net>
 <net name="5V" class="0">

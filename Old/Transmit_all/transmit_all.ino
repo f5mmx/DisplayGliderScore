@@ -1,10 +1,9 @@
-
 /*
 * Gestion Afficheur Glider Score - Emmission
 *       version 1.5 juillet 2018
 *       Adaptation au programme f3K et glider score avec protocole etendue
 *       G01R01T0230WT .....
-*       version 1.7 fevrier 2019
+*       version 1.6 septembre 2018
 *       Adaptation au programme enhanced protocol de GliderScoer
 * rajout d'un OLED pour visu en local               
 * 
@@ -14,9 +13,7 @@
 * 
 * Version 1.3 Rajout d'envoi une trame toutes les 250Ms
 * Version 1.4 debug de la transmission cyclique envoi toutes les 250mS de la trame radio
-* Version 1.5 adaptation au protocole f3K de A.Rotteleur
-* Version 1.6 adapatation protocol etendue ehanced protocole
-* Version 1.7 implementation d'un simple checksum 8 bits en fin de trame d'envoie
+* Version 1.5 adaptation protocol etendue
 * 
 * Etude des frequences Radio 2.4Ghz
 * The range is 2.400 to 2.525 Ghz which is 2400 to 2525 MHz (MegaHz). 
@@ -77,16 +74,14 @@ String chrono ="0";
 String statut ="NO";
 
 unsigned long temps_ancien = 0;
-unsigned long tempcyc = 250; 
-
-char sum;
+unsigned long tempcyc = 250L; 
 
 void initaff() {
       display.clearDisplay();
       display.setTextSize(1);
       display.setTextColor(WHITE);
       display.setCursor(0,0);
-      display.println("  Version : 1.7 EP");
+      display.println("  Version : 1.6 EP");
       display.setCursor(5,30);
       display.setTextSize(5);
       display.setTextColor(WHITE);
@@ -160,9 +155,8 @@ if (millis() - temps_ancien >= tempcyc)
    {
       chainerecu = chainerecu.substring(0,13);  //(0,14) f3K programme demander d'enlever le LF et de ne garder que le CR 
       //Serial.println("On a une trame complete"+ chainerecu);
-      chainerecu = checksum(chainerecu);
       chainerecu.toCharArray(chaineradio,chainerecu.length()+1); // récupère la chaine recu dans le tableau de char de chaine radio 
-      radio.write(&chaineradio,sizeof(chaineradio));     // envoi de la chaine recu RS en radio
+      radio.write(&chaineradio,sizeof(chaineradio)); // envoi de la chaine recu RS en radio
       Serial.println ("Envoiradio:"+chainerecu);
       chainecourante = chainerecu ;
       affdisplay();
@@ -181,15 +175,6 @@ if (millis() - temps_ancien >= tempcyc)
 }
 
 
-String checksum(String chaine)
-{
-      sum=0;
-      for (byte i=0;i<(chaine.length()-2);i++)
-      {
-          sum = chaine[i] +sum;
-      }  
-      sum = (sum & 0x3F) + 0x20;
-      return (chaine+sum);
-}
+
 
 
